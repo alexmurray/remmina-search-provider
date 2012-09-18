@@ -1,0 +1,6 @@
+{
+    "shell-version": ["3.4"],
+    "uuid": "remmina-search-provider@alexmurray.github.com",
+    "name": "Remmina Search Provider",
+    "description": "Search for Remmina Remote Desktop Connections"
+}
