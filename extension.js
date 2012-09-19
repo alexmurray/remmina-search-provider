@@ -40,7 +40,7 @@ const RemminaSearchProvider = new Lang.Class({
     Extends: Search.SearchProvider,
 
     _init: function (name) {
-        this.parent('REMMINA REMOTE DESKTOP SESSIONS');
+        this.parent('REMMINA CONNECTIONS');
 
         this._sessions = [];
 
@@ -138,10 +138,14 @@ const RemminaSearchProvider = new Lang.Class({
         let results = [];
 
         for (let i = 0; i < terms.length; i++) {
-            let re = new RegExp(terms[i]);
+            // search for terms ignoring case
+            let re = new RegExp(terms[i], 'i');
             for (let j = 0; j < sessions.length; j++) {
                 let session = sessions[j];
-                if (session.name.search(re) >= 0) {
+                // search on name, protocol or the term remmina
+                if (session.name.search(re) >= 0 ||
+                    session.protocol.search(re) >= 0 ||
+                    'remmina'.search(re) >= 0) {
                     results.push(session);
                 }
             }
