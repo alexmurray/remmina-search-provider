@@ -20,6 +20,7 @@
 
 const Main = imports.ui.main;
 const Search = imports.ui.search;
+const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const Shell = imports.gi.Shell;
@@ -28,11 +29,12 @@ const Util = imports.misc.util;
 const FileUtils = imports.misc.fileUtils;
 const Lang = imports.lang;
 
-const icons = { 'RDP': 'gnome-remote-desktop',
-                'VNC': 'gnome-remote-desktop',
-                'SFTP': 'gnome-fs-ftp',
-                'SSH': 'utilities-terminal' };
-
+const emblems = { 'NX': 'remmina-nx',
+                  'RDP': 'remmina-rdp',
+                  'SFTP': 'remmina-sftp',
+                  'SSH': 'gnome-terminal',
+                  'VNC': 'remmina-vnc',
+                  'XDMCP': 'remmina-xdmcp' };
 let provider = null;
 
 const RemminaSearchProvider = new Lang.Class({
@@ -109,14 +111,23 @@ const RemminaSearchProvider = new Lang.Class({
     },
 
     _createIconForId: function (id, size) {
-        let icon_name = 'remmina';
-        if (id.protocol in icons) {
-            icon_name = icons[id.protocol];
+        let box = new Clutter.Box();
+        let cache = St.TextureCache.get_default();
+        let icon = cache.load_icon_name(null,
+                                        'remmina',
+                                        St.IconType.FULLCOLOR,
+                                        size);
+        box.add_child(icon);
+        if (id.protocol in emblems) {
+            let emblem = cache.load_icon_name(null,
+                                              emblems[id.protocol],
+                                              St.IconType.FULLCOLOR,
+                                              22);
+            box.add_child(emblem);
         }
-        return St.TextureCache.get_default().load_icon_name(null, icon_name,
-                                                            St.IconType.FULLCOLOR,
-                                                            size);
+        return box;
     },
+
     getResultMeta: function (id) {
         return { id: id,
                  name: id.name + ' (' + id.protocol + ')',
