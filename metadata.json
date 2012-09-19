@@ -4,4 +4,5 @@
     "name": "Remmina Search Provider",
     "url": "https://github.com/alexmurray/remmina-search-provider/",
     "description": "Search for Remmina Remote Desktop Connections"
+    "version": 1
 }
