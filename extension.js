@@ -23,9 +23,15 @@ const Search = imports.ui.search;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const Shell = imports.gi.Shell;
+const St = imports.gi.St;
 const Util = imports.misc.util;
 const FileUtils = imports.misc.fileUtils;
 const Lang = imports.lang;
+
+const icons = { 'RDP': 'gnome-remote-desktop',
+                'VNC': 'gnome-remote-desktop',
+                'SFTP': 'gnome-fs-ftp',
+                'SSH': 'utilities-terminal' };
 
 let provider = null;
 
@@ -34,7 +40,7 @@ const RemminaSearchProvider = new Lang.Class({
     Extends: Search.SearchProvider,
 
     _init: function (name) {
-	this.parent("REMMINA REMOTE DESKTOP SESSIONS");
+	this.parent('REMMINA REMOTE DESKTOP SESSIONS');
 
 	this._sessions = [];
 
@@ -68,18 +74,24 @@ const RemminaSearchProvider = new Lang.Class({
 		return;
 	    }
 
-	    if (!keyfile.has_group("remmina")) {
+	    if (!keyfile.has_group('remmina')) {
 		return;
 	    }
-	    let name = keyfile.get_string("remmina", "name");
+	    let name = keyfile.get_string('remmina', 'name');
 	    if (name) {
+                // get the type of session so we can use different
+                // icons for each
+		let protocol = keyfile.get_string('remmina', 'protocol');
 		let session = { name: name,
+                                protocol: protocol,
 				file: path };
-		/* make sure session doesn't already exist in _sessions */
+		// if this session already exists in _sessions then
+		// delete and add again to update it
 		for (let i = 0; i < this._sessions.length; i++) {
 		    let s = this._sessions[i];
 		    if (s.file == session.file) {
-			return;
+		        this._sessions.splice(i, 1);
+		        break;
 		    }
 		}
 		this._sessions.push(session);
@@ -96,15 +108,22 @@ const RemminaSearchProvider = new Lang.Class({
 	}
     },
 
+    _createIconForId: function (id, size) {
+        let icon_name = 'remmina';
+        if (id.protocol in icons) {
+            icon_name = icons[id.protocol];
+        }
+        return St.TextureCache.get_default().load_icon_name(null, icon_name,
+                                                            St.IconType.FULLCOLOR,
+                                                            size);
+    },
     getResultMeta: function (id) {
-	let app_sys = Shell.AppSystem.get_default();
-	let app = app_sys.lookup_app('remmina.desktop');
-	return meta = { id: id,
-		        name: id.name,
-		        createIcon: function (size) {
-                            return app.create_icon_texture(size);
-		        }
-	              };
+	return { id: id,
+		 name: id.name + ' (' + id.protocol + ')',
+		 createIcon: Lang.bind(this, function (size) {
+                     return this._createIconForId(id, size);
+		 })
+	       };
     },
 
     getResultMetas: function (ids) {
