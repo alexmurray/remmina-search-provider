@@ -40,72 +40,72 @@ const RemminaSearchProvider = new Lang.Class({
     Extends: Search.SearchProvider,
 
     _init: function (name) {
-	this.parent('REMMINA REMOTE DESKTOP SESSIONS');
+        this.parent('REMMINA REMOTE DESKTOP SESSIONS');
 
-	this._sessions = [];
+        this._sessions = [];
 
-	let path = GLib.build_filenamev([GLib.get_home_dir(), '/.remmina']);
-	let dir = Gio.file_new_for_path(path);
-	let monitor = dir.monitor_directory(Gio.FileMonitorFlags.NONE, null);
-	monitor.connect('changed', Lang.bind(this, this._onMonitorChanged));
-	/* save a reference so we can cancel it on disable */
-	this._remminaMonitor = monitor;
+        let path = GLib.build_filenamev([GLib.get_home_dir(), '/.remmina']);
+        let dir = Gio.file_new_for_path(path);
+        let monitor = dir.monitor_directory(Gio.FileMonitorFlags.NONE, null);
+        monitor.connect('changed', Lang.bind(this, this._onMonitorChanged));
+        /* save a reference so we can cancel it on disable */
+        this._remminaMonitor = monitor;
 
-	FileUtils.listDirAsync(dir, Lang.bind(this, function (files) {
+        FileUtils.listDirAsync(dir, Lang.bind(this, function (files) {
             files.map(function (f) {
                 let name = f.get_name();
                 let file_path = GLib.build_filenamev([path, name]);
                 let file = Gio.file_new_for_path(file_path);
                 this._onMonitorChanged(this._remminaMonitor, file,
-		                       null, Gio.FileMonitorEvent.CREATED);
+                                       null, Gio.FileMonitorEvent.CREATED);
             }, this);
-	}));
+        }));
     },
 
     _onMonitorChanged: function(monitor, file, other_file, type) {
-	let path = file.get_path();
-	if (type == Gio.FileMonitorEvent.CREATED ||
-	    type == Gio.FileMonitorEvent.CHANGED ||
-	    type == Gio.FileMonitorEvent.CHANGES_DONE_HINT) {
-	    let keyfile = new GLib.KeyFile();
-	    try {
-		keyfile.load_from_file(path, 0);
-	    } catch (e) {
-		return;
-	    }
+        let path = file.get_path();
+        if (type == Gio.FileMonitorEvent.CREATED ||
+            type == Gio.FileMonitorEvent.CHANGED ||
+            type == Gio.FileMonitorEvent.CHANGES_DONE_HINT) {
+            let keyfile = new GLib.KeyFile();
+            try {
+                keyfile.load_from_file(path, 0);
+            } catch (e) {
+                return;
+            }
 
-	    if (!keyfile.has_group('remmina')) {
-		return;
-	    }
-	    let name = keyfile.get_string('remmina', 'name');
-	    if (name) {
+            if (!keyfile.has_group('remmina')) {
+                return;
+            }
+            let name = keyfile.get_string('remmina', 'name');
+            if (name) {
                 // get the type of session so we can use different
                 // icons for each
-		let protocol = keyfile.get_string('remmina', 'protocol');
-		let session = { name: name,
+                let protocol = keyfile.get_string('remmina', 'protocol');
+                let session = { name: name,
                                 protocol: protocol,
-				file: path };
-		// if this session already exists in _sessions then
-		// delete and add again to update it
-		for (let i = 0; i < this._sessions.length; i++) {
-		    let s = this._sessions[i];
-		    if (s.file == session.file) {
-		        this._sessions.splice(i, 1);
-		        break;
-		    }
-		}
-		this._sessions.push(session);
-	    }
-	} else if (type == Gio.FileMonitorEvent.DELETED) {
-	    for (let i = 0; i < this._sessions.length; i++) {
-		let s = this._sessions[i];
-		if (s.file == path) {
-		    /* remove the current element from _sessions */
-		    this._sessions.splice(i, 1);
-		    break;
-		}
-	    }
-	}
+                                file: path };
+                // if this session already exists in _sessions then
+                // delete and add again to update it
+                for (let i = 0; i < this._sessions.length; i++) {
+                    let s = this._sessions[i];
+                    if (s.file == session.file) {
+                        this._sessions.splice(i, 1);
+                        break;
+                    }
+                }
+                this._sessions.push(session);
+            }
+        } else if (type == Gio.FileMonitorEvent.DELETED) {
+            for (let i = 0; i < this._sessions.length; i++) {
+                let s = this._sessions[i];
+                if (s.file == path) {
+                    /* remove the current element from _sessions */
+                    this._sessions.splice(i, 1);
+                    break;
+                }
+            }
+        }
     },
 
     _createIconForId: function (id, size) {
@@ -118,12 +118,12 @@ const RemminaSearchProvider = new Lang.Class({
                                                             size);
     },
     getResultMeta: function (id) {
-	return { id: id,
-		 name: id.name + ' (' + id.protocol + ')',
-		 createIcon: Lang.bind(this, function (size) {
+        return { id: id,
+                 name: id.name + ' (' + id.protocol + ')',
+                 createIcon: Lang.bind(this, function (size) {
                      return this._createIconForId(id, size);
-		 })
-	       };
+                 })
+               };
     },
 
     getResultMetas: function (ids) {
@@ -131,30 +131,30 @@ const RemminaSearchProvider = new Lang.Class({
     },
 
     activateResult: function (id) {
-	Util.spawn([ 'remmina', '-c', id.file ]);
+        Util.spawn([ 'remmina', '-c', id.file ]);
     },
 
     _getResultSet: function (sessions, terms) {
-	let results = [];
+        let results = [];
 
-	for (let i = 0; i < terms.length; i++) {
-	    let re = new RegExp(terms[i]);
-	    for (let j = 0; j < sessions.length; j++) {
-	        let session = sessions[j];
-	        if (session.name.search(re) >= 0) {
-		    results.push(session);
+        for (let i = 0; i < terms.length; i++) {
+            let re = new RegExp(terms[i]);
+            for (let j = 0; j < sessions.length; j++) {
+                let session = sessions[j];
+                if (session.name.search(re) >= 0) {
+                    results.push(session);
                 }
-	    }
-	}
-	return results;
+            }
+        }
+        return results;
     },
 
     getInitialResultSet: function (terms) {
-	return this._getResultSet(this._sessions, terms);
+        return this._getResultSet(this._sessions, terms);
     },
 
     getSubsearchResultSet: function (results, terms) {
-	return this._getResultSet(results, terms);
+        return this._getResultSet(results, terms);
     }
 });
 
@@ -163,15 +163,15 @@ function init (meta) {
 
 function enable () {
     if (!provider) {
-	provider = new RemminaSearchProvider();
-	Main.overview.addSearchProvider(provider);
+        provider = new RemminaSearchProvider();
+        Main.overview.addSearchProvider(provider);
     }
 }
 
 function disable() {
     if (provider) {
-	Main.overview.removeSearchProvider(provider);
-	provider._remminaMonitor.cancel();
-	provider = null;
+        Main.overview.removeSearchProvider(provider);
+        provider._remminaMonitor.cancel();
+        provider = null;
     }
 }
