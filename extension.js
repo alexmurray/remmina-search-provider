@@ -147,18 +147,24 @@ const RemminaSearchProvider = new Lang.Class({
 
     _getResultSet: function (sessions, terms) {
         let results = [];
-
-        for (let i = 0; i < terms.length; i++) {
-            // search for terms ignoring case
-            let re = new RegExp(terms[i], 'i');
-            for (let j = 0; j < sessions.length; j++) {
-                let session = sessions[j];
+        // search for terms ignoring case - create re's once only for
+        // each term and make sure matches all terms
+        let res = terms.map(function (term) { return new RegExp(term, 'i'); });
+        for (let i = 0; i < sessions.length; i++) {
+            let session = sessions[i];
+            let failed = false;
+            for (let j = 0; j < res.length; j++) {
+                let re = res[j];
                 // search on name, protocol or the term remmina
-                if (session.name.search(re) >= 0 ||
-                    session.protocol.search(re) >= 0 ||
-                    'remmina'.search(re) >= 0) {
-                    results.push(session);
+                failed |= (session.name.search(re) < 0 &&
+                           session.protocol.search(re) < 0 &&
+                           'remmina'.search(re) < 0);
+                if (failed) {
+                    break;
                 }
+            }
+            if (!failed) {
+                results.push(session);
             }
         }
         return results;
