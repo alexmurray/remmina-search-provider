@@ -25,6 +25,7 @@ const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
+const Params = imports.misc.params;
 const Util = imports.misc.util;
 const FileUtils = imports.misc.fileUtils;
 const Lang = imports.lang;
@@ -143,6 +144,15 @@ const RemminaSearchProvider = new Lang.Class({
 
     activateResult: function (id) {
         Util.spawn([ 'remmina', '-c', id.file ]);
+    },
+
+    dragActivateResult: function(id, params) {
+        params = Params.parse(params, { workspace: -1,
+                                        timestamp: global.get_current_time() });
+        let workspace = global.screen.get_workspace_by_index(params.workspace);
+        // switch to workspace and launch remmina connection there
+        workspace.activate(params.timestamp);
+        this.activateResult(id);
     },
 
     _getResultSet: function (sessions, terms) {
