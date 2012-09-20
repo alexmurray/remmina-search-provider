@@ -140,6 +140,9 @@ const RemminaSearchProvider = new Lang.Class({
 
     getResultMetas: function (ids, callback) {
         let metas = ids.map(this.getResultMeta, this);
+        // GNOME 3.5.1 or so introduced passing result asynchronously
+        // via callback so try that first - if it fails then simply
+        // return the results to stay compatible with 3.4
         try {
             callback(metas);
         } finally {
@@ -182,6 +185,9 @@ const RemminaSearchProvider = new Lang.Class({
                 results.push(session);
             }
         }
+        // GNOME 3.5.1 or so introduced passing result asynchronously
+        // via pushResults() so try that first - if it fails then
+        // simply return the results to stay compatible with 3.4
         try {
             this.searchSystem.pushResults(this, results);
         } finally {
@@ -190,10 +196,16 @@ const RemminaSearchProvider = new Lang.Class({
     },
 
     getInitialResultSet: function (terms) {
+        // GNOME 3.4 needs the results returned directly whereas 3.5.1
+        // etc will ignore this and instead need pushResults() from
+        // _getResultSet() above
         return this._getResultSet(this._sessions, terms);
     },
 
     getSubsearchResultSet: function (results, terms) {
+        // GNOME 3.4 needs the results returned directly whereas 3.5.1
+        // etc will ignore this and instead need pushResults() from
+        // _getResultSet() above
         return this._getResultSet(results, terms);
     }
 });
