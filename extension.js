@@ -138,8 +138,13 @@ const RemminaSearchProvider = new Lang.Class({
                };
     },
 
-    getResultMetas: function (ids) {
-        return ids.map(this.getResultMeta, this);
+    getResultMetas: function (ids, callback) {
+        let metas = ids.map(this.getResultMeta, this);
+        try {
+            callback(metas);
+        } finally {
+            return metas;
+        }
     },
 
     activateResult: function (id) {
@@ -177,7 +182,11 @@ const RemminaSearchProvider = new Lang.Class({
                 results.push(session);
             }
         }
-        return results;
+        try {
+            this.searchSystem.pushResults(this, results);
+        } finally {
+            return results;
+        }
     },
 
     getInitialResultSet: function (terms) {
