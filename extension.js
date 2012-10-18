@@ -116,14 +116,18 @@ const RemminaSearchProvider = new Lang.Class({
         let cache = St.TextureCache.get_default();
         let icon = cache.load_icon_name(null,
                                         'remmina',
-                                        St.IconType.FULLCOLOR,
+                                        // St.IconType was removed in 3.6
+                                        St.IconType ? St.IconType.FULLCOLOR : size,
                                         size);
         box.add_child(icon);
         if (id.protocol in emblems) {
+            // remmina emblems are fixed size of 22 pixels
+            let size = 22;
             let emblem = cache.load_icon_name(null,
                                               emblems[id.protocol],
-                                              St.IconType.FULLCOLOR,
-                                              22);
+                                              // St.IconType was removed in 3.6
+                                              St.IconType ? St.IconType.FULLCOLOR : size,
+                                              size);
             box.add_child(emblem);
         }
         return box;
