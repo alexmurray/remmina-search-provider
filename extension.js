@@ -19,7 +19,6 @@
  */
 
 const Main = imports.ui.main;
-const Search = imports.ui.search;
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
@@ -29,6 +28,7 @@ const Params = imports.misc.params;
 const Util = imports.misc.util;
 const FileUtils = imports.misc.fileUtils;
 const Lang = imports.lang;
+const IconGrid = imports.ui.iconGrid;
 
 const emblems = { 'NX': 'remmina-nx',
                   'RDP': 'remmina-rdp',
@@ -37,13 +37,42 @@ const emblems = { 'NX': 'remmina-nx',
                   'VNC': 'remmina-vnc',
                   'XDMCP': 'remmina-xdmcp' };
 let provider = null;
+const RemminaIconBin = new Lang.Class({
+    Name: 'RemminaIconBin',
+
+    _init: function(protocol, name) {
+        this.actor = new St.Bin({ reactive: true,
+                                  track_hover: true });
+        this._protocol = protocol;
+        this.icon = new IconGrid.BaseIcon(name,
+                                          { showLabel: true,
+                                            createIcon: Lang.bind(this, this.createIcon) } );
+
+        this.actor.child = this.icon.actor;
+        this.actor.label_actor = this.icon.label;
+    },
+
+    createIcon: function (size) {
+        let box = new Clutter.Box();
+        let icon = new St.Icon({ icon_name: 'remmina',
+                                 icon_size: size });
+        box.add_child(icon);
+        if (this._protocol in emblems) {
+            // remmina emblems are fixed size of 22 pixels
+            let size = 22;
+            let emblem = new St.Icon({ icon_name: emblems[this._protocol],
+                                       icon_size: size});
+            box.add_child(emblem);
+        }
+        return box;
+    }
+});
 
 const RemminaSearchProvider = new Lang.Class({
     Name: 'RemminaSearchProvider',
-    Extends: Search.SearchProvider,
 
     _init: function (name) {
-        this.parent('REMMINA CONNECTIONS');
+        this.id = 'remmina';
 
         this._sessions = [];
 
@@ -111,47 +140,20 @@ const RemminaSearchProvider = new Lang.Class({
         }
     },
 
-    _createIconForId: function (id, size) {
-        let box = new Clutter.Box();
-        let cache = St.TextureCache.get_default();
-        let icon = cache.load_icon_name(null,
-                                        'remmina',
-                                        // St.IconType was removed in 3.6
-                                        St.IconType ? St.IconType.FULLCOLOR : size,
-                                        size);
-        box.add_child(icon);
-        if (id.protocol in emblems) {
-            // remmina emblems are fixed size of 22 pixels
-            let size = 22;
-            let emblem = cache.load_icon_name(null,
-                                              emblems[id.protocol],
-                                              // St.IconType was removed in 3.6
-                                              St.IconType ? St.IconType.FULLCOLOR : size,
-                                              size);
-            box.add_child(emblem);
-        }
-        return box;
+    createResultActor: function (result, terms) {
+        let icon = new RemminaIconBin(result.id.protocol, result.name);
+        return icon.actor;
     },
 
     getResultMeta: function (id) {
         return { id: id,
-                 name: id.name + ' (' + id.protocol + ')',
-                 createIcon: Lang.bind(this, function (size) {
-                     return this._createIconForId(id, size);
-                 })
+                 name: id.name + ' (' + id.protocol + ')'
                };
     },
 
     getResultMetas: function (ids, callback) {
         let metas = ids.map(this.getResultMeta, this);
-        // GNOME 3.5.1 or so introduced passing result asynchronously
-        // via callback so try that first - if it fails then simply
-        // return the results to stay compatible with 3.4
-        try {
-            callback(metas);
-        } finally {
-            return metas;
-        }
+        callback(metas);
     },
 
     activateResult: function (id) {
@@ -189,14 +191,7 @@ const RemminaSearchProvider = new Lang.Class({
                 results.push(session);
             }
         }
-        // GNOME 3.5.1 or so introduced passing result asynchronously
-        // via pushResults() so try that first - if it fails then
-        // simply return the results to stay compatible with 3.4
-        try {
-            this.searchSystem.pushResults(this, results);
-        } finally {
-            return results;
-        }
+        this.searchSystem.pushResults(this, results);
     },
 
     getInitialResultSet: function (terms) {
