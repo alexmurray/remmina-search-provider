@@ -140,33 +140,28 @@ const RemminaSearchProvider = new Lang.Class({
         }
     },
 
-    createResultActor: function (result, terms) {
+    createResultObject: function (result, terms) {
         let icon = new RemminaIconBin(result.id.protocol, result.name);
-        return icon.actor;
+        return icon;
     },
 
-    getResultMeta: function (id) {
-        return { id: id,
-                 name: id.name + ' (' + id.protocol + ')'
-               };
+
+    filterResults: function (results, max) {
+        return results.slice(0, max);
     },
 
     getResultMetas: function (ids, callback) {
-        let metas = ids.map(this.getResultMeta, this);
+        let metas = [];
+        for (let i = 0; i < ids.length; i++) {
+            let id = ids[i];
+            metas.push({ id: id,
+                         name: id.name + ' (' + id.protocol + ')' });
+        }
         callback(metas);
     },
 
     activateResult: function (id) {
         Util.spawn([ 'remmina', '-c', id.file ]);
-    },
-
-    dragActivateResult: function(id, params) {
-        params = Params.parse(params, { workspace: -1,
-                                        timestamp: global.get_current_time() });
-        let workspace = global.screen.get_workspace_by_index(params.workspace);
-        // switch to workspace and launch remmina connection there
-        workspace.activate(params.timestamp);
-        this.activateResult(id);
     },
 
     _getResultSet: function (sessions, terms) {
@@ -191,21 +186,15 @@ const RemminaSearchProvider = new Lang.Class({
                 results.push(session);
             }
         }
-        this.searchSystem.pushResults(this, results);
+        this.searchSystem.setResults(this, results);
     },
 
     getInitialResultSet: function (terms) {
-        // GNOME 3.4 needs the results returned directly whereas 3.5.1
-        // etc will ignore this and instead need pushResults() from
-        // _getResultSet() above
-        return this._getResultSet(this._sessions, terms);
+        this._getResultSet(this._sessions, terms);
     },
 
     getSubsearchResultSet: function (results, terms) {
-        // GNOME 3.4 needs the results returned directly whereas 3.5.1
-        // etc will ignore this and instead need pushResults() from
-        // _getResultSet() above
-        return this._getResultSet(results, terms);
+        this._getResultSet(results, terms);
     }
 });
 
