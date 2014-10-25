@@ -83,7 +83,7 @@ const RemminaSearchProvider = new Lang.Class({
         /* save a reference so we can cancel it on disable */
         this._remminaMonitor = monitor;
 
-        FileUtils.listDirAsync(dir, Lang.bind(this, function (files) {
+        this.listDirAsync(dir, Lang.bind(this, function (files) {
             files.map(function (f) {
                 let name = f.get_name();
                 let file_path = GLib.build_filenamev([path, name]);
@@ -140,11 +140,33 @@ const RemminaSearchProvider = new Lang.Class({
         }
     },
 
+    // steal from FileUtils since doesn't exist in FileUtils anymore
+    // since GNOME 3.12
+    listDirAsync: function(file, callback) {
+        let allFiles = [];
+        file.enumerate_children_async('standard::name,standard::type',
+                                      Gio.FileQueryInfoFlags.NONE,
+                                      GLib.PRIORITY_LOW, null,
+                                      function (obj, res) {
+                                          let enumerator = obj.enumerate_children_finish(res);
+                                          function onNextFileComplete(obj, res) {
+                                              let files = obj.next_files_finish(res);
+                                              if (files.length) {
+                                                  allFiles = allFiles.concat(files);
+                                                  enumerator.next_files_async(100, GLib.PRIORITY_LOW, null, onNextFileComplete);
+                                              } else {
+                                                  enumerator.close(null);
+                                                  callback(allFiles);
+                                              }
+                                          }
+                                          enumerator.next_files_async(100, GLib.PRIORITY_LOW, null, onNextFileComplete);
+                                      });
+    },
+
     createResultObject: function (result, terms) {
         let icon = new RemminaIconBin(result.id.protocol, result.name);
         return icon;
     },
-
 
     filterResults: function (results, max) {
         return results.slice(0, max);
@@ -186,15 +208,19 @@ const RemminaSearchProvider = new Lang.Class({
                 results.push(session);
             }
         }
-        this.searchSystem.setResults(this, results);
+        return results;
     },
 
-    getInitialResultSet: function (terms) {
-        this._getResultSet(this._sessions, terms);
+    getInitialResultSet: function (terms, callback, cancelable) {
+        let results = this._getResultSet(this._sessions, terms);
+        callback(results);
+        return results;
     },
 
-    getSubsearchResultSet: function (results, terms) {
-        this._getResultSet(results, terms);
+    getSubsearchResultSet: function (results, terms, callback, cancelable) {
+        let results = this._getResultSet(results, terms);
+        callback(results);
+        return results;
     }
 });
 
@@ -204,13 +230,14 @@ function init (meta) {
 function enable () {
     if (!provider) {
         provider = new RemminaSearchProvider();
-        Main.overview.addSearchProvider(provider);
+        Main.overview.viewSelector._searchResults._searchSystem.addProvider(provider);
     }
 }
 
 function disable() {
     if (provider) {
-        Main.overview.removeSearchProvider(provider);
+        Main.overview.viewSelector._searchResults._searchSystem._unregisterProvider(provider);
+        Main.overview.viewSelector._searchResults._searchSystem.emit('providers-changed');
         provider._remminaMonitor.cancel();
         provider = null;
     }
