@@ -30,6 +30,8 @@ const FileUtils = imports.misc.fileUtils;
 const Lang = imports.lang;
 const IconGrid = imports.ui.iconGrid;
 
+let remminaApp = Shell.AppSystem.get_default().lookup_app("remmina");
+
 const emblems = { 'NX': 'remmina-nx',
                   'RDP': 'remmina-rdp',
                   'SFTP': 'remmina-sftp',
@@ -54,13 +56,19 @@ const RemminaIconBin = new Lang.Class({
 
     createIcon: function (size) {
         let box = new Clutter.Box();
-        let icon = new St.Icon({ icon_name: 'remmina',
+        let icon;
+
+        if (remminaApp) {
+            icon = remminaApp.create_icon_texture(size);
+        } else {
+            icon = new St.Icon({ gicon: new Gio.ThemedIcon({name: 'remmina'}),
                                  icon_size: size });
+        }
         box.add_child(icon);
         if (this._protocol in emblems) {
             // remmina emblems are fixed size of 22 pixels
             let size = 22;
-            let emblem = new St.Icon({ icon_name: emblems[this._protocol],
+            let emblem = new St.Icon({ gicon: new Gio.ThemedIcon({name: emblems[this._protocol]}),
                                        icon_size: size});
             box.add_child(emblem);
         }
@@ -195,7 +203,11 @@ const RemminaSearchProvider = new Lang.Class({
     },
 
     activateResult: function (id) {
-        Util.spawn([ 'remmina', '-c', id.file ]);
+        if (remminaApp) {
+            remminaApp.launch(global.get_current_time(), ['-c', id], -1);
+        } else {
+            Util.spawn(['remmina', '-c', id]);
+        }
     },
 
     _getResultSet: function (sessions, terms) {
