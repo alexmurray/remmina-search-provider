@@ -164,7 +164,7 @@ const RemminaSearchProvider = new Lang.Class({
     },
 
     createResultObject: function (result, terms) {
-        let icon = new RemminaIconBin(result.id.protocol, result.name);
+        let icon = new RemminaIconBin(result.protocol, result.name);
         return icon;
     },
 
@@ -176,8 +176,20 @@ const RemminaSearchProvider = new Lang.Class({
         let metas = [];
         for (let i = 0; i < ids.length; i++) {
             let id = ids[i];
-            metas.push({ id: id,
-                         name: id.name + ' (' + id.protocol + ')' });
+            let session = null;
+            // find session details
+            for (let j = 0; !session && j < this._sessions.length; j++) {
+                let _session = this._sessions[j];
+                if (_session.file == id)
+                    session = _session;
+            }
+            if (session != null) {
+                metas.push({ id: id,
+                             protocol: session.protocol,
+                             name: session.name + ' (' + session.protocol + ')' });
+            } else {
+                log("failed to find session with id: " + id);
+            }
         }
         callback(metas);
     },
@@ -194,18 +206,15 @@ const RemminaSearchProvider = new Lang.Class({
         for (let i = 0; i < sessions.length; i++) {
             let session = sessions[i];
             let failed = false;
-            for (let j = 0; j < res.length; j++) {
+            for (let j = 0; !failed && j < res.length; j++) {
                 let re = res[j];
                 // search on name, protocol or the term remmina
                 failed |= (session.name.search(re) < 0 &&
                            session.protocol.search(re) < 0 &&
                            'remmina'.search(re) < 0);
-                if (failed) {
-                    break;
-                }
             }
             if (!failed) {
-                results.push(session);
+                results.push(session.file);
             }
         }
         return results;
@@ -218,7 +227,7 @@ const RemminaSearchProvider = new Lang.Class({
     },
 
     getSubsearchResultSet: function (results, terms, callback, cancelable) {
-        let results = this._getResultSet(results, terms);
+        let results = this._getResultSet(this._sessions, terms);
         callback(results);
         return results;
     }
