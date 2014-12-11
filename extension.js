@@ -22,6 +22,8 @@ const Main = imports.ui.main;
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
+const Grl = imports.gi.Grl;
+const Search = imports.ui.search;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
 const Params = imports.misc.params;
@@ -29,6 +31,7 @@ const Util = imports.misc.util;
 const FileUtils = imports.misc.fileUtils;
 const Lang = imports.lang;
 const IconGrid = imports.ui.iconGrid;
+const Signals = imports.signals;
 
 let remminaApp = Shell.AppSystem.get_default().lookup_app("remmina");
 
@@ -41,17 +44,36 @@ const emblems = { 'NX': 'remmina-nx',
 let provider = null;
 const RemminaIconBin = new Lang.Class({
     Name: 'RemminaIconBin',
+    Extends: Search.SearchResultsBase,
 
-    _init: function(protocol, name) {
-        this.actor = new St.Bin({ reactive: true,
-                                  track_hover: true });
+    _init: function(id, protocol, name) {
+        this._id = id;
         this._protocol = protocol;
-        this.icon = new IconGrid.BaseIcon(name,
-                                          { showLabel: true,
-                                            createIcon: Lang.bind(this, this.createIcon) } );
+        this._name = name;
 
-        this.actor.child = this.icon.actor;
+        this.actor = new St.Button({ style_class: 'app-well-app',
+                                     reactive: true,
+                                     button_mask: St.ButtonMask.ONE | St.ButtonMask.TWO,
+                                     can_focus: true,
+                                     x_fill: true,
+                                     y_fill: true });
+        this.actor._delegate = this;
+
+
+        
+        this.icon = new IconGrid.BaseIcon(name, {
+            showLabel: true,
+            createIcon: Lang.bind(this, this.createIcon) 
+        });
+
+        this.actor.set_child(this.icon.actor);
         this.actor.label_actor = this.icon.label;
+
+        this.actor.connect('clicked', Lang.bind(this, this._onClicked));
+    },
+
+    _onClicked: function() {
+        this.emit("activate", this._id);
     },
 
     createIcon: function (size) {
@@ -75,6 +97,7 @@ const RemminaIconBin = new Lang.Class({
         return box;
     }
 });
+Signals.addSignalMethods(RemminaIconBin.prototype);
 
 const RemminaSearchProvider = new Lang.Class({
     Name: 'RemminaSearchProvider',
@@ -91,7 +114,7 @@ const RemminaSearchProvider = new Lang.Class({
         /* save a reference so we can cancel it on disable */
         this._remminaMonitor = monitor;
 
-        this.listDirAsync(dir, Lang.bind(this, function (files) {
+        this._listDirAsync(dir, Lang.bind(this, function (files) {
             files.map(function (f) {
                 let name = f.get_name();
                 let file_path = GLib.build_filenamev([path, name]);
@@ -150,7 +173,7 @@ const RemminaSearchProvider = new Lang.Class({
 
     // steal from FileUtils since doesn't exist in FileUtils anymore
     // since GNOME 3.12
-    listDirAsync: function(file, callback) {
+    _listDirAsync: function(file, callback) {
         let allFiles = [];
         file.enumerate_children_async('standard::name,standard::type',
                                       Gio.FileQueryInfoFlags.NONE,
@@ -172,7 +195,7 @@ const RemminaSearchProvider = new Lang.Class({
     },
 
     createResultObject: function (result, terms) {
-        let icon = new RemminaIconBin(result.protocol, result.name);
+        let icon = new RemminaIconBin(result.id, result.protocol, result.name);
         return icon;
     },
 
@@ -202,7 +225,7 @@ const RemminaSearchProvider = new Lang.Class({
         callback(metas);
     },
 
-    activateResult: function (id) {
+    activateResult: function (id, terms) {
         if (remminaApp) {
             remminaApp.launch(global.get_current_time(), ['-c', id], -1);
         } else {
@@ -235,13 +258,11 @@ const RemminaSearchProvider = new Lang.Class({
     getInitialResultSet: function (terms, callback, cancelable) {
         let results = this._getResultSet(this._sessions, terms);
         callback(results);
-        return results;
     },
 
     getSubsearchResultSet: function (results, terms, callback, cancelable) {
         let results = this._getResultSet(this._sessions, terms);
         callback(results);
-        return results;
     }
 });
 
@@ -251,14 +272,23 @@ function init (meta) {
 function enable () {
     if (!provider) {
         provider = new RemminaSearchProvider();
-        Main.overview.viewSelector._searchResults._searchSystem.addProvider(provider);
+        
+        if (Main.overview.viewSelector._searchResults._searchSystem) {
+            Main.overview.viewSelector._searchResults._searchSystem.addProvider(provider)
+        } else {            
+            Main.overview.viewSelector._searchResults._registerProvider(provider);
+        }
     }
 }
 
 function disable() {
     if (provider) {
-        Main.overview.viewSelector._searchResults._searchSystem._unregisterProvider(provider);
-        Main.overview.viewSelector._searchResults._searchSystem.emit('providers-changed');
+        if (Main.overview.viewSelector._searchResults._searchSystem) {
+            Main.overview.viewSelector._searchResults._searchSystem._unregisterProvider(provider);
+        } else {            
+            Main.overview.viewSelector._searchResults._unregisterProvider(provider);
+        }
+        
         provider._remminaMonitor.cancel();
         provider = null;
     }
