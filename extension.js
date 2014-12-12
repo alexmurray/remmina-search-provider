@@ -256,13 +256,13 @@ const RemminaSearchProvider = new Lang.Class({
     },
 
     getInitialResultSet: function (terms, callback, cancelable) {
-        let results = this._getResultSet(this._sessions, terms);
-        callback(results);
+        let realResults = this._getResultSet(this._sessions, terms);
+        callback(realResults);
     },
 
     getSubsearchResultSet: function (results, terms, callback, cancelable) {
-        let results = this._getResultSet(this._sessions, terms);
-        callback(results);
+        let realResults = this._getResultSet(this._sessions, terms);
+        callback(realResults);
     }
 });
 
