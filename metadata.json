@@ -1,5 +1,5 @@
 {
-    "shell-version": [ "3.14" ],
+    "shell-version": [ "3.14", "3.16", "3.18" ],
     "uuid": "remmina-search-provider@alexmurray.github.com",
     "name": "Remmina Search Provider",
     "url": "https://github.com/alexmurray/remmina-search-provider/",
