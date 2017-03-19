@@ -38,6 +38,7 @@ let remminaApp = Shell.AppSystem.get_default().lookup_app("remmina");
 const emblems = { 'NX': 'remmina-nx',
                   'RDP': 'remmina-rdp',
                   'SFTP': 'remmina-sftp',
+                  'SPICE': 'remmina-spice',
                   'SSH': 'gnome-terminal',
                   'VNC': 'remmina-vnc',
                   'XDMCP': 'remmina-xdmcp' };
