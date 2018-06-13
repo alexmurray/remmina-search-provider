@@ -107,7 +107,7 @@ const RemminaSearchProvider = new Lang.Class({
 
         this._sessions = [];
 
-        let path = GLib.build_filenamev([GLib.get_home_dir(), '/.remmina']);
+        let path = GLib.build_filenamev([GLib.get_user_data_dir(), 'remmina']);
         let dir = Gio.file_new_for_path(path);
         let monitor = dir.monitor_directory(Gio.FileMonitorFlags.NONE, null);
         monitor.connect('changed', Lang.bind(this, this._onMonitorChanged));
