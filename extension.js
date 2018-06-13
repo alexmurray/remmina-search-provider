@@ -60,10 +60,9 @@ const RemminaIconBin = new Lang.Class({
         this.actor._delegate = this;
 
 
-        
         this.icon = new IconGrid.BaseIcon(name, {
             showLabel: true,
-            createIcon: Lang.bind(this, this.createIcon) 
+            createIcon: Lang.bind(this, this.createIcon)
         });
 
         this.actor.set_child(this.icon.actor);
@@ -272,10 +271,10 @@ function init (meta) {
 function enable () {
     if (!provider) {
         provider = new RemminaSearchProvider();
-        
+
         if (Main.overview.viewSelector._searchResults._searchSystem) {
-            Main.overview.viewSelector._searchResults._searchSystem.addProvider(provider)
-        } else {            
+            Main.overview.viewSelector._searchResults._searchSystem.addProvider(provider);
+        } else {
             Main.overview.viewSelector._searchResults._registerProvider(provider);
         }
     }
@@ -285,10 +284,10 @@ function disable() {
     if (provider) {
         if (Main.overview.viewSelector._searchResults._searchSystem) {
             Main.overview.viewSelector._searchResults._searchSystem._unregisterProvider(provider);
-        } else {            
+        } else {
             Main.overview.viewSelector._searchResults._unregisterProvider(provider);
         }
-        
+
         provider._remminaMonitor.cancel();
         provider = null;
     }
