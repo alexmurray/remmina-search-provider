@@ -230,6 +230,9 @@ const RemminaSearchProvider = new Lang.Class({
         } else {
             Util.spawn(['remmina', '-c', id]);
         }
+        // specifically hide the overview -
+        // https://github.com/alexmurray/remmina-search-provider/issues/19
+        Main.overview.hide();
     },
 
     _getResultSet: function (sessions, terms) {
