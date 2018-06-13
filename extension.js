@@ -22,7 +22,6 @@ const Main = imports.ui.main;
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
-const Grl = imports.gi.Grl;
 const Search = imports.ui.search;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
