@@ -22,6 +22,7 @@ const Main = imports.ui.main;
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
+const Gtk = imports.gi.Gtk;
 const Search = imports.ui.search;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
@@ -32,7 +33,15 @@ const Lang = imports.lang;
 const IconGrid = imports.ui.iconGrid;
 const Signals = imports.signals;
 
-let remminaApp = Shell.AppSystem.get_default().lookup_app("remmina");
+// desktop id changed in recent releases
+let ids = ["remmina", "org.remmina.Remmina"];
+let remminaApp = null;
+for (let i = 0; !remminaApp && i < ids.length; i++)
+{
+    remminaApp = Shell.AppSystem.get_default().lookup_app(ids[i]);
+}
+if (!remminaApp)
+    log("Failed to find remmina application");
 
 const emblems = { 'NX': 'remmina-nx',
                   'RDP': 'remmina-rdp',
@@ -82,7 +91,18 @@ const RemminaIconBin = new Lang.Class({
         if (remminaApp) {
             icon = remminaApp.create_icon_texture(size);
         } else {
-            icon = new St.Icon({ gicon: new Gio.ThemedIcon({name: 'remmina'}),
+            // try different icon names
+            let theme = Gtk.IconTheme.get_default();
+            let gicon = null;
+            for (let i = 0; i < ids.length; i++) {
+                let name = ids[i];
+                if (theme.has_icon(name)) {
+                    gicon = new Gio.ThemedIcon({name: name});
+                }
+            }
+            if (!gicon)
+                log("Failed to find icon for remmina");
+            icon = new St.Icon({ gicon: gicon,
                                  icon_size: size });
         }
         box.add_child(icon);
