@@ -29,7 +29,6 @@ const St = imports.gi.St;
 const Params = imports.misc.params;
 const Util = imports.misc.util;
 const FileUtils = imports.misc.fileUtils;
-const Lang = imports.lang;
 const IconGrid = imports.ui.iconGrid;
 const Signals = imports.signals;
 
@@ -51,77 +50,9 @@ const emblems = { 'NX': 'remmina-nx',
                   'VNC': 'remmina-vnc',
                   'XDMCP': 'remmina-xdmcp' };
 let provider = null;
-const RemminaIconBin = new Lang.Class({
-    Name: 'RemminaIconBin',
-    Extends: Search.SearchResultsBase,
 
-    _init: function(id, protocol, name) {
-        this._id = id;
-        this._protocol = protocol;
-        this._name = name;
-
-        this.actor = new St.Button({ style_class: 'app-well-app',
-                                     reactive: true,
-                                     button_mask: St.ButtonMask.ONE | St.ButtonMask.TWO,
-                                     can_focus: true,
-                                     x_fill: true,
-                                     y_fill: true });
-        this.actor._delegate = this;
-
-
-        this.icon = new IconGrid.BaseIcon(name, {
-            showLabel: true,
-            createIcon: Lang.bind(this, this.createIcon)
-        });
-
-        this.actor.set_child(this.icon.actor);
-        this.actor.label_actor = this.icon.label;
-
-        this.actor.connect('clicked', Lang.bind(this, this._onClicked));
-    },
-
-    _onClicked: function() {
-        this.emit("activate", this._id);
-    },
-
-    createIcon: function (size) {
-        let box = new Clutter.Box();
-        let icon;
-
-        if (remminaApp) {
-            icon = remminaApp.create_icon_texture(size);
-        } else {
-            // try different icon names
-            let theme = Gtk.IconTheme.get_default();
-            let gicon = null;
-            for (let i = 0; i < ids.length; i++) {
-                let name = ids[i];
-                if (theme.has_icon(name)) {
-                    gicon = new Gio.ThemedIcon({name: name});
-                }
-            }
-            if (!gicon)
-                log("Failed to find icon for remmina");
-            icon = new St.Icon({ gicon: gicon,
-                                 icon_size: size });
-        }
-        box.add_child(icon);
-        if (this._protocol in emblems) {
-            // remmina emblems are fixed size of 22 pixels
-            let size = 22;
-            let emblem = new St.Icon({ gicon: new Gio.ThemedIcon({name: emblems[this._protocol]}),
-                                       icon_size: size});
-            box.add_child(emblem);
-        }
-        return box;
-    }
-});
-Signals.addSignalMethods(RemminaIconBin.prototype);
-
-const RemminaSearchProvider = new Lang.Class({
-    Name: 'RemminaSearchProvider',
-
-    _init: function (name) {
+var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
+    constructor(name) {
         this.id = 'remmina';
 
         this._sessions = [];
@@ -129,22 +60,24 @@ const RemminaSearchProvider = new Lang.Class({
         let path = GLib.build_filenamev([GLib.get_user_data_dir(), 'remmina']);
         let dir = Gio.file_new_for_path(path);
         let monitor = dir.monitor_directory(Gio.FileMonitorFlags.NONE, null);
-        monitor.connect('changed', Lang.bind(this, this._onMonitorChanged));
+        monitor.connect('changed', (monitor, file, other_file, type) => {
+            this._onMonitorChanged(monitor, file, other_file, type);
+        });
         /* save a reference so we can cancel it on disable */
         this._remminaMonitor = monitor;
 
-        this._listDirAsync(dir, Lang.bind(this, function (files) {
-            files.map(function (f) {
+        this._listDirAsync(dir, (files) => {
+            files.map((f) => {
                 let name = f.get_name();
                 let file_path = GLib.build_filenamev([path, name]);
                 let file = Gio.file_new_for_path(file_path);
                 this._onMonitorChanged(this._remminaMonitor, file,
                                        null, Gio.FileMonitorEvent.CREATED);
             }, this);
-        }));
-    },
+        });
+    }
 
-    _onMonitorChanged: function(monitor, file, other_file, type) {
+    _onMonitorChanged(monitor, file, other_file, type) {
         let path = file.get_path();
         if (type == Gio.FileMonitorEvent.CREATED ||
             type == Gio.FileMonitorEvent.CHANGED ||
@@ -164,8 +97,12 @@ const RemminaSearchProvider = new Lang.Class({
                 // get the type of session so we can use different
                 // icons for each
                 let protocol = keyfile.get_string('remmina', 'protocol');
+                let server = keyfile.get_string('remmina', 'server');
+                let group = keyfile.get_string('remmina', 'group');
                 let session = { name: name,
                                 protocol: protocol,
+                                server: server,
+                                group: group,
                                 file: path };
                 // if this session already exists in _sessions then
                 // delete and add again to update it
@@ -188,11 +125,11 @@ const RemminaSearchProvider = new Lang.Class({
                 }
             }
         }
-    },
+    }
 
     // steal from FileUtils since doesn't exist in FileUtils anymore
     // since GNOME 3.12
-    _listDirAsync: function(file, callback) {
+    _listDirAsync(file, callback) {
         let allFiles = [];
         file.enumerate_children_async('standard::name,standard::type',
                                       Gio.FileQueryInfoFlags.NONE,
@@ -211,18 +148,48 @@ const RemminaSearchProvider = new Lang.Class({
                                           }
                                           enumerator.next_files_async(100, GLib.PRIORITY_LOW, null, onNextFileComplete);
                                       });
-    },
+    }
 
-    createResultObject: function (result, terms) {
-        let icon = new RemminaIconBin(result.id, result.protocol, result.name);
-        return icon;
-    },
+    createResultObject(metaInfo, terms) {
+        metaInfo.createIcon = (size) => {
+            let box = new Clutter.Box();
+            let icon;
 
-    filterResults: function (results, max) {
+            if (remminaApp) {
+                icon = remminaApp.create_icon_texture(size);
+            } else {
+                // try different icon names
+                let theme = Gtk.IconTheme.get_default();
+                let gicon = null;
+                for (let i = 0; i < ids.length; i++) {
+                    let name = ids[i];
+                    if (theme.has_icon(name)) {
+                        gicon = new Gio.ThemedIcon({name: name});
+                    }
+                }
+                if (!gicon)
+                    log("Failed to find icon for remmina");
+                icon = new St.Icon({ gicon: gicon,
+                                     icon_size: size });
+            }
+            box.add_child(icon);
+            if (metaInfo.protocol in emblems) {
+                // remmina emblems are fixed size of 22 pixels
+                let size = 22;
+                let emblem = new St.Icon({ gicon: new Gio.ThemedIcon({name: emblems[metaInfo.protocol]}),
+                                           icon_size: size});
+                box.add_child(emblem);
+            }
+            return box;
+        };
+        return new Search.GridSearchResult(provider, metaInfo, null);
+    }
+
+    filterResults(results, max) {
         return results.slice(0, max);
-    },
+    }
 
-    getResultMetas: function (ids, callback) {
+    getResultMetas(ids, callback) {
         let metas = [];
         for (let i = 0; i < ids.length; i++) {
             let id = ids[i];
@@ -234,17 +201,20 @@ const RemminaSearchProvider = new Lang.Class({
                     session = _session;
             }
             if (session != null) {
+                let prefix = ((session.group && session.group != "") ?
+                              ("[" + session.group + "] ") : "");
                 metas.push({ id: id,
                              protocol: session.protocol,
-                             name: session.name + ' (' + session.protocol + ')' });
+                             description: session.server,
+                             name: prefix + session.name + ' (' + session.protocol + ')' });
             } else {
                 log("failed to find session with id: " + id);
             }
         }
         callback(metas);
-    },
+    }
 
-    activateResult: function (id, terms) {
+    activateResult(id, terms) {
         if (remminaApp) {
             remminaApp.launch(global.get_current_time(), ['-c', id], -1);
         } else {
@@ -253,9 +223,9 @@ const RemminaSearchProvider = new Lang.Class({
         // specifically hide the overview -
         // https://github.com/alexmurray/remmina-search-provider/issues/19
         Main.overview.hide();
-    },
+    }
 
-    _getResultSet: function (sessions, terms) {
+    _getResultSet(sessions, terms) {
         let results = [];
         // search for terms ignoring case - create re's once only for
         // each term and make sure matches all terms
@@ -275,18 +245,18 @@ const RemminaSearchProvider = new Lang.Class({
             }
         }
         return results;
-    },
+    }
 
-    getInitialResultSet: function (terms, callback, cancelable) {
-        let realResults = this._getResultSet(this._sessions, terms);
-        callback(realResults);
-    },
-
-    getSubsearchResultSet: function (results, terms, callback, cancelable) {
+    getInitialResultSet(terms, callback, cancelable) {
         let realResults = this._getResultSet(this._sessions, terms);
         callback(realResults);
     }
-});
+
+    getSubsearchResultSet(results, terms, callback, cancelable) {
+        let realResults = this._getResultSet(this._sessions, terms);
+        callback(realResults);
+    }
+};
 
 function init (meta) {
 }
