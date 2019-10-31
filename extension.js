@@ -169,8 +169,10 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
                 }
                 if (!gicon)
                     log("Failed to find icon for remmina");
+                // handle display scaling
+                let scale_factor = St.ThemeContext.get_for_stage(global.stage).scale_factor;
                 icon = new St.Icon({ gicon: gicon,
-                                     icon_size: size });
+                                     icon_size: size / scale_factor });
             }
             box.add_child(icon);
             if (metaInfo.protocol in emblems) {
