@@ -161,7 +161,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
                 // try different icon names
                 let theme = Gtk.IconTheme.get_default();
                 let gicon = null;
-                for (let i = 0; i < ids.length; i++) {
+                for (let i = 0; !gicon && i < ids.length; i++) {
                     let name = ids[i];
                     if (theme.has_icon(name)) {
                         gicon = new Gio.ThemedIcon({name: name});
