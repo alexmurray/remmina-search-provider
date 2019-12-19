@@ -191,6 +191,12 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
         return results.slice(0, max);
     }
 
+    _wrapText(str, maxWidth) {
+        return str.replace(
+            new RegExp(`(?![^\\n]{1,${maxWidth}}$)([^\\n]{1,${maxWidth}})\\s`, 'g'),
+            '$1\n');
+    }
+
     getResultMetas(ids, callback) {
         let metas = [];
         for (let i = 0; i < ids.length; i++) {
@@ -205,10 +211,14 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
             if (session != null) {
                 let prefix = ((session.group && session.group != "") ?
                               ("[" + session.group + "] ") : "");
+                let name = this._wrapText(prefix + session.name + ' (' + session.protocol + ')',
+                                          // TODO: Wrap at max label width
+                                          15);
+
                 metas.push({ id: id,
                              protocol: session.protocol,
                              description: session.server,
-                             name: prefix + session.name + ' (' + session.protocol + ')' });
+                             name: name });
             } else {
                 log("failed to find session with id: " + id);
             }
