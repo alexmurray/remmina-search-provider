@@ -184,7 +184,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
             }
             return box;
         };
-        return new Search.GridSearchResult(provider, metaInfo, null);
+        return new Search.GridSearchResult(provider, metaInfo, Main.overview.viewSelector._searchResults);
     }
 
     filterResults(results, max) {
