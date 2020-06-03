@@ -33,14 +33,16 @@ const IconGrid = imports.ui.iconGrid;
 const Signals = imports.signals;
 
 // desktop id changed in recent releases
-let ids = ["remmina", "org.remmina.Remmina"];
+let ids = ["org.remmina.Remmina", "remmina", "remmina-file"];
 let remminaApp = null;
 for (let i = 0; !remminaApp && i < ids.length; i++)
 {
-    remminaApp = Shell.AppSystem.get_default().lookup_app(ids[i]);
+    remminaApp = Shell.AppSystem.get_default().lookup_app(ids[i] + ".desktop");
 }
 if (!remminaApp)
+{
     log("Failed to find remmina application");
+}
 
 const emblems = { 'NX': 'remmina-nx',
                   'RDP': 'remmina-rdp',
@@ -157,7 +159,10 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
 
             if (remminaApp) {
                 icon = remminaApp.create_icon_texture(size);
-            } else {
+            }
+
+            if (!icon || !icon.gicon)
+            {
                 // try different icon names
                 let theme = Gtk.IconTheme.get_default();
                 let gicon = null;
@@ -228,7 +233,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
 
     activateResult(id, terms) {
         if (remminaApp) {
-            remminaApp.launch(global.get_current_time(), ['-c', id], -1);
+            remminaApp.app_info.launch([Gio.file_new_for_path(id)], null);
         } else {
             Util.spawn(['remmina', '-c', id]);
         }
