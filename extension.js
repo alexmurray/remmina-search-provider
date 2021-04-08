@@ -189,7 +189,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
             }
             return box;
         };
-        return new Search.GridSearchResult(provider, metaInfo, Main.overview.viewSelector._searchResults);
+        return new Search.GridSearchResult(provider, metaInfo, getMainOverviewViewSelector()._searchResults);
     }
 
     filterResults(results, max) {
@@ -275,27 +275,39 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
     }
 };
 
+function getMainOverviewViewSelector() {
+    if ( Main.overview._overview.controls !== undefined) {
+        // GS 40+
+        return Main.overview._overview.controls._searchController;
+    } else {
+        // GS 38-
+        return Main.overview.viewSelector;
+    }
+}
+
 function init (meta) {
 }
 
 function enable () {
     if (!provider) {
         provider = new RemminaSearchProvider();
+        let _searchResults = getMainOverviewViewSelector()._searchResults
 
-        if (Main.overview.viewSelector._searchResults._searchSystem) {
-            Main.overview.viewSelector._searchResults._searchSystem.addProvider(provider);
+        if (_searchResults._searchSystem) {
+            _searchResults._searchSystem.addProvider(provider);
         } else {
-            Main.overview.viewSelector._searchResults._registerProvider(provider);
+            _searchResults._registerProvider(provider);
         }
     }
 }
 
 function disable() {
     if (provider) {
-        if (Main.overview.viewSelector._searchResults._searchSystem) {
-            Main.overview.viewSelector._searchResults._searchSystem._unregisterProvider(provider);
+        let _searchResults = getMainOverviewViewSelector()._searchResults
+        if (_searchResults._searchSystem) {
+            _searchResults._searchSystem._unregisterProvider(provider);
         } else {
-            Main.overview.viewSelector._searchResults._unregisterProvider(provider);
+            _searchResults._unregisterProvider(provider);
         }
 
         provider._remminaMonitor.cancel();
