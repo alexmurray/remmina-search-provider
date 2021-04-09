@@ -154,7 +154,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
 
     createResultObject(metaInfo, terms) {
         metaInfo.createIcon = (size) => {
-            let box = new Clutter.Box();
+            let box = new St.BoxLayout();
             let icon;
 
             if (remminaApp) {
