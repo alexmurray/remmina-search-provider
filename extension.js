@@ -183,7 +183,18 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
             if (metaInfo.protocol in emblems) {
                 // remmina emblems are fixed size of 22 pixels
                 let size = 22;
-                let emblem = new St.Icon({ gicon: new Gio.ThemedIcon({name: emblems[metaInfo.protocol]}),
+                let name = emblems[metaInfo.protocol];
+                let theme = Gtk.IconTheme.get_default();
+                if (!theme.has_icon(name)) {
+                    // try with org.remmina.Remmina prefix as more recent
+                    // releases have changed to use this full prefix
+                    name = name.replace('remmina', 'org.remmina.Remmina');
+                    if (!theme.has_icon(name)) {
+                        // also try with -symbolic suffix
+                        name = name + '-symbolic';
+                    }
+                }
+                let emblem = new St.Icon({ gicon: new Gio.ThemedIcon({name: name}),
                                            icon_size: size});
                 box.add_child(emblem);
             }
