@@ -213,7 +213,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
             '$1\n');
     }
 
-    getResultMetas(ids, callback) {
+    async getResultMetas(ids, cancellable) {
         let metas = [];
         for (let i = 0; i < ids.length; i++) {
             let id = ids[i];
@@ -239,7 +239,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
                 log("failed to find session with id: " + id);
             }
         }
-        callback(metas);
+        return metas;
     }
 
     activateResult(id, terms) {
@@ -253,7 +253,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
         Main.overview.hide();
     }
 
-    _getResultSet(sessions, terms) {
+    _getResultSet(sessions, terms, cancellable) {
         let results = [];
         // search for terms ignoring case - create re's once only for
         // each term and make sure matches all terms
@@ -275,14 +275,13 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
         return results;
     }
 
-    getInitialResultSet(terms, callback, cancelable) {
-        let realResults = this._getResultSet(this._sessions, terms);
-        callback(realResults);
+    async getInitialResultSet(terms, cancellable) {
+        let realResults = this._getResultSet(this._sessions, terms, cancellable);
+        return realResults;
     }
 
-    getSubsearchResultSet(results, terms, callback, cancelable) {
-        let realResults = this._getResultSet(this._sessions, terms);
-        callback(realResults);
+    async getSubsearchResultSet(results, terms, cancellable) {
+        return this.getInitialResultSet(terms, cancellable);
     }
 };
 
@@ -302,8 +301,7 @@ function init (meta) {
 function enable () {
     if (!provider) {
         provider = new RemminaSearchProvider();
-        let _searchResults = getMainOverviewViewSelector()._searchResults
-
+        let _searchResults = getMainOverviewViewSelector()._searchResults;
         if (_searchResults._searchSystem) {
             _searchResults._searchSystem.addProvider(provider);
         } else {
@@ -314,7 +312,7 @@ function enable () {
 
 function disable() {
     if (provider) {
-        let _searchResults = getMainOverviewViewSelector()._searchResults
+        let _searchResults = getMainOverviewViewSelector()._searchResults;
         if (_searchResults._searchSystem) {
             _searchResults._searchSystem._unregisterProvider(provider);
         } else {
