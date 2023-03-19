@@ -154,8 +154,11 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
 
     createResultObject(metaInfo, terms) {
         metaInfo.createIcon = (size) => {
+            let theme = new Gtk.IconTheme();
             let box = new St.BoxLayout();
             let icon;
+
+	    theme.set_theme_name(St.Settings.get().gtk_icon_theme);
 
             if (remminaApp) {
                 icon = remminaApp.create_icon_texture(size);
@@ -164,7 +167,6 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
             if (!icon || !icon.gicon)
             {
                 // try different icon names
-                let theme = Gtk.IconTheme.get_default();
                 let gicon = null;
                 for (let i = 0; !gicon && i < ids.length; i++) {
                     let name = ids[i];
@@ -184,7 +186,6 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
                 // remmina emblems are fixed size of 22 pixels
                 let size = 22;
                 let name = emblems[metaInfo.protocol];
-                let theme = Gtk.IconTheme.get_default();
                 if (!theme.has_icon(name)) {
                     // try with org.remmina.Remmina prefix as more recent
                     // releases have changed to use this full prefix
