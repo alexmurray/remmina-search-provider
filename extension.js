@@ -22,7 +22,6 @@ const Main = imports.ui.main;
 const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
-const Gtk = imports.gi.Gtk;
 const Search = imports.ui.search;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
@@ -154,11 +153,9 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
 
     createResultObject(metaInfo, terms) {
         metaInfo.createIcon = (size) => {
-            let theme = new Gtk.IconTheme();
+            let theme = new St.IconTheme();
             let box = new St.BoxLayout();
             let icon;
-
-	    theme.set_theme_name(St.Settings.get().gtk_icon_theme);
 
             if (remminaApp) {
                 icon = remminaApp.create_icon_texture(size);
