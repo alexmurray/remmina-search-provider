@@ -1,4 +1,4 @@
-/* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*- */
 /**
  * Remmina Search Provider for GNOME Shell
  *
@@ -18,18 +18,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const Main = imports.ui.main;
-const Clutter = imports.gi.Clutter;
-const GLib = imports.gi.GLib;
-const Gio = imports.gi.Gio;
-const Search = imports.ui.search;
-const Shell = imports.gi.Shell;
-const St = imports.gi.St;
-const Params = imports.misc.params;
-const Util = imports.misc.util;
-const FileUtils = imports.misc.fileUtils;
-const IconGrid = imports.ui.iconGrid;
-const Signals = imports.signals;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
+import Shell from 'gi://Shell';
+import St from 'gi://St';
+import * as Util from 'resource:///org/gnome/shell/misc/util.js';
+import * as Search from 'resource:///org/gnome/shell/ui/search.js';
 
 // desktop id changed in recent releases
 let ids = ["org.remmina.Remmina", "remmina", "remmina-file"];
@@ -293,31 +288,31 @@ function getMainOverviewViewSelector() {
     }
 }
 
-function init (meta) {
-}
-
-function enable () {
-    if (!provider) {
-        provider = new RemminaSearchProvider();
-        let _searchResults = getMainOverviewViewSelector()._searchResults;
-        if (_searchResults._searchSystem) {
-            _searchResults._searchSystem.addProvider(provider);
-        } else {
-            _searchResults._registerProvider(provider);
+export default class RemminaSearchProviderExtension {
+    enable () {
+        if (!provider) {
+            provider = new RemminaSearchProvider();
+            let _searchResults = getMainOverviewViewSelector()._searchResults;
+            if (_searchResults._searchSystem) {
+                _searchResults._searchSystem.addProvider(provider);
+            } else {
+                _searchResults._registerProvider(provider);
+            }
         }
     }
-}
 
-function disable() {
-    if (provider) {
-        let _searchResults = getMainOverviewViewSelector()._searchResults;
-        if (_searchResults._searchSystem) {
-            _searchResults._searchSystem._unregisterProvider(provider);
-        } else {
-            _searchResults._unregisterProvider(provider);
+    disable() {
+        if (provider) {
+            let _searchResults = getMainOverviewViewSelector()._searchResults;
+            if (_searchResults._searchSystem) {
+                _searchResults._searchSystem._unregisterProvider(provider);
+            } else {
+                _searchResults._unregisterProvider(provider);
+            }
+
+            provider._remminaMonitor.cancel();
+            provider = null;
         }
-
-        provider._remminaMonitor.cancel();
-        provider = null;
     }
+
 }
