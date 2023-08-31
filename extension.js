@@ -193,7 +193,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
             }
             return box;
         };
-        return new Search.GridSearchResult(provider, metaInfo, getMainOverviewViewSelector()._searchResults);
+        return new Search.GridSearchResult(provider, metaInfo, Main.overview.searchController._searchResults);
     }
 
     filterResults(results, max) {
@@ -278,38 +278,17 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
     }
 };
 
-function getMainOverviewViewSelector() {
-    if ( Main.overview._overview.controls !== undefined) {
-        // GS 40+
-        return Main.overview._overview.controls._searchController;
-    } else {
-        // GS 38-
-        return Main.overview.viewSelector;
-    }
-}
-
 export default class RemminaSearchProviderExtension {
     enable () {
         if (!provider) {
             provider = new RemminaSearchProvider();
-            let _searchResults = getMainOverviewViewSelector()._searchResults;
-            if (_searchResults._searchSystem) {
-                _searchResults._searchSystem.addProvider(provider);
-            } else {
-                _searchResults._registerProvider(provider);
-            }
+            Main.overview.searchController.addProvider(provider);
         }
     }
 
     disable() {
         if (provider) {
-            let _searchResults = getMainOverviewViewSelector()._searchResults;
-            if (_searchResults._searchSystem) {
-                _searchResults._searchSystem._unregisterProvider(provider);
-            } else {
-                _searchResults._unregisterProvider(provider);
-            }
-
+            Main.overview.searchController.removeProvider(provider);
             provider._remminaMonitor.cancel();
             provider = null;
         }
