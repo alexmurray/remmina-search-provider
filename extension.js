@@ -275,17 +275,17 @@ export default class RemminaSearchProviderExtension {
             Main.overview.searchController.addProvider(provider);
         }
         if (!remminaApp) {
-	    // desktop id changed in recent releases
-	    let ids = ["org.remmina.Remmina", "remmina", "remmina-file"];
-	    for (let i = 0; !remminaApp && i < ids.length; i++)
-	    {
-		remminaApp = Shell.AppSystem.get_default().lookup_app(ids[i] + ".desktop");
-	    }
-	    if (!remminaApp)
-	    {
-		log("Failed to find remmina application");
-	    }
-	}
+            // desktop id changed in recent releases
+            let ids = ["org.remmina.Remmina", "remmina", "remmina-file"];
+            for (let i = 0; !remminaApp && i < ids.length; i++)
+            {
+                remminaApp = Shell.AppSystem.get_default().lookup_app(ids[i] + ".desktop");
+            }
+            if (!remminaApp)
+            {
+                log("Failed to find remmina application");
+            }
+        }
     }
 
     disable() {
@@ -293,6 +293,9 @@ export default class RemminaSearchProviderExtension {
             Main.overview.searchController.removeProvider(provider);
             provider._remminaMonitor.cancel();
             provider = null;
+        }
+        if (remminaApp) {
+            remminaApp = null;
         }
     }
 
