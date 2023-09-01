@@ -26,17 +26,7 @@ import St from 'gi://St';
 import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import * as Search from 'resource:///org/gnome/shell/ui/search.js';
 
-// desktop id changed in recent releases
-let ids = ["org.remmina.Remmina", "remmina", "remmina-file"];
 let remminaApp = null;
-for (let i = 0; !remminaApp && i < ids.length; i++)
-{
-    remminaApp = Shell.AppSystem.get_default().lookup_app(ids[i] + ".desktop");
-}
-if (!remminaApp)
-{
-    log("Failed to find remmina application");
-}
 
 const emblems = { 'NX': 'remmina-nx',
                   'RDP': 'remmina-rdp',
@@ -284,6 +274,18 @@ export default class RemminaSearchProviderExtension {
             provider = new RemminaSearchProvider();
             Main.overview.searchController.addProvider(provider);
         }
+        if (!remminaApp) {
+	    // desktop id changed in recent releases
+	    let ids = ["org.remmina.Remmina", "remmina", "remmina-file"];
+	    for (let i = 0; !remminaApp && i < ids.length; i++)
+	    {
+		remminaApp = Shell.AppSystem.get_default().lookup_app(ids[i] + ".desktop");
+	    }
+	    if (!remminaApp)
+	    {
+		log("Failed to find remmina application");
+	    }
+	}
     }
 
     disable() {
