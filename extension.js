@@ -148,13 +148,11 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
 
             if (!icon || !icon.gicon)
             {
-                // try different icon names
+                // try the app icon
                 let gicon = null;
-                for (let i = 0; !gicon && i < ids.length; i++) {
-                    let name = ids[i];
-                    if (theme.has_icon(name)) {
-                        gicon = new Gio.ThemedIcon({name: name});
-                    }
+                id = remminaApp.get_id();
+                if (theme.has_icon(id)) {
+                    gicon = new Gio.ThemedIcon({name: id});
                 }
                 if (!gicon)
                     log("Failed to find icon for remmina");
