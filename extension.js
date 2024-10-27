@@ -244,8 +244,9 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
             let failed = false;
             for (let j = 0; !failed && j < res.length; j++) {
                 let re = res[j];
-                // search on name, protocol or the term remmina
+                // search on name, group, protocol or the term remmina
                 failed |= (session.name.search(re) < 0 &&
+                           session.group.search(re) < 0 &&
                            session.protocol.search(re) < 0 &&
                            'remmina'.search(re) < 0);
             }
