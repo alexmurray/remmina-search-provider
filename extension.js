@@ -28,39 +28,86 @@ import * as Search from 'resource:///org/gnome/shell/ui/search.js';
 
 let remminaApp = null;
 
-const emblems = { 'NX': 'remmina-nx',
-                  'RDP': 'remmina-rdp',
-                  'SFTP': 'remmina-sftp',
-                  'SPICE': 'remmina-spice',
-                  'SSH': 'gnome-terminal',
-                  'VNC': 'remmina-vnc',
-                  'XDMCP': 'remmina-xdmcp' };
+const emblems = {
+    'NX': ['remmina-nx', 'org.remmina.Remmina-nx'],
+    'RDP': ['remmina-rdp', 'org.remmina.Remmina-rdp'],
+    'SFTP': ['remmina-sftp', 'org.remmina.Remmina-sftp'],
+    'SPICE': ['remmina-spice', 'org.remmina.Remmina-spice'],
+    'SSH': ['remmina-ssh', 'org.remmina.Remmina-ssh', 'gnome-terminal', 'org.gnome.Terminal', 'x-term'],
+    'VNC': ['remmina-vnc', 'org.remmina.Remmina-vnc'],
+    'XDMCP': ['remmina-xdmcp', 'org.remmina.Remmina-xdmcp']
+};
 let provider = null;
 
 var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
-    constructor(name) {
-        this.id = 'remmina';
+    _getDataDirPaths() {
+        // remmina stores its configuration in ~/.config/remmina/remmina.pref -
+        // this may also be within a snap -
+        // ie. ~/snap/remmina/current/.config/remmina/remmina.pref or flatpak -
+        // ~/.var/app/org.remmina.Remmina/config/remmina/remmina.pref - from
+        // each of these files parse it as a gkeyfile and get the
+        // remmina_pref.datadir_path value from each
+        let dirs = [GLib.build_filenamev([GLib.get_home_dir(), '.config', 'remmina']),
+                    GLib.build_filenamev([GLib.get_home_dir(), 'snap', 'remmina', 'current', '.config', 'remmina']),
+                    GLib.build_filenamev([GLib.get_home_dir(), '.var', 'app', 'org.remmina.Remmina', 'config', 'remmina'])];
+        let paths = [];
+        dirs.map((dir_path) => {
+            let pref_file_path = GLib.build_filenamev([dir_path, 'remmina.pref']);
+            let pref_file = Gio.file_new_for_path(pref_file_path);
+            if (pref_file.query_exists(null)) {
+                let keyfile = new GLib.KeyFile();
+                try {
+                    keyfile.load_from_file(pref_file_path, 0);
+                    if (keyfile.has_group('remmina_pref')) {
+                        let data_dir = keyfile.get_string('remmina_pref', 'datadir_path');
+                        if (data_dir && data_dir != "" &&
+                            paths.indexOf(data_dir) < 0) {
+                                paths.push(data_dir);
+                            }
+                    } else {
+                        console.warn("remmina_pref group not found in remmina pref file: " + pref_file_path);
+                    }
+                    keyfile = null;
+                } catch (e) {
+                    console.warn("Failed to load remmina pref file: " + pref_file_path + ": " + e.toString());
+                }
+            }
 
-        this._sessions = [];
+        }
+        , this);
+        return paths;
+    }
 
-        let path = GLib.build_filenamev([GLib.get_user_data_dir(), 'remmina']);
+    _monitorRemminaDir(path) {
         let dir = Gio.file_new_for_path(path);
         let monitor = dir.monitor_directory(Gio.FileMonitorFlags.NONE, null);
         monitor.connect('changed', (monitor, file, other_file, type) => {
             this._onMonitorChanged(monitor, file, other_file, type);
         });
         /* save a reference so we can cancel it on disable */
-        this._remminaMonitor = monitor;
+        this._remminaMonitors.push(monitor);
 
         this._listDirAsync(dir, (files) => {
             files.map((f) => {
                 let name = f.get_name();
                 let file_path = GLib.build_filenamev([path, name]);
                 let file = Gio.file_new_for_path(file_path);
-                this._onMonitorChanged(this._remminaMonitor, file,
+                this._onMonitorChanged(monitor, file,
                                        null, Gio.FileMonitorEvent.CREATED);
             }, this);
         });
+    }
+
+    constructor(name) {
+        this.id = 'remmina';
+
+        this._sessions = [];
+        this._remminaMonitors = [];
+
+        let paths = this._getDataDirPaths();
+        for (let i = 0; i < paths.length; i++) {
+            this._monitorRemminaDir(paths[i]);
+        }
     }
 
     _onMonitorChanged(monitor, file, other_file, type) {
@@ -72,6 +119,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
             try {
                 keyfile.load_from_file(path, 0);
             } catch (e) {
+                console.warn("Failed to load remmina session file: " + path + ": " + e.toString());
                 return;
             }
 
@@ -100,7 +148,10 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
                     }
                 }
                 this._sessions.push(session);
+            } else {
+                console.warn("Remmina session missing name in file: " + path);
             }
+                keyfile = null;
         } else if (type == Gio.FileMonitorEvent.DELETED) {
             for (let i = 0; i < this._sessions.length; i++) {
                 let s = this._sessions[i];
@@ -139,15 +190,19 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
     createResultObject(metaInfo, terms) {
         metaInfo.createIcon = (size) => {
             let theme = new St.IconTheme();
+            // add snap icon search path
+            let snapIconPath = GLib.build_filenamev(['/snap', 'remmina', 'current', 'usr', 'share', 'icons']);
+            if (GLib.file_test(snapIconPath, GLib.FileTest.IS_DIR)) {
+                theme.append_search_path(snapIconPath);
+            }
             let box = new St.BoxLayout();
-            let icon;
+            let icon = null;
 
             if (remminaApp) {
                 icon = remminaApp.create_icon_texture(size);
             }
 
-            if (!icon || !icon.gicon)
-            {
+            if (!icon || !icon.gicon) {
                 // try the app icon
                 let gicon = null;
                 id = remminaApp.get_id();
@@ -155,7 +210,8 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
                     gicon = new Gio.ThemedIcon({name: id});
                 }
                 if (!gicon)
-                    log("Failed to find icon for remmina");
+                    // this should not happen in general so log if it does
+                    console.debug("Failed to find icon for remmina");
                 // handle display scaling
                 let scale_factor = St.ThemeContext.get_for_stage(global.stage).scale_factor;
                 icon = new St.Icon({ gicon: gicon,
@@ -165,19 +221,27 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
             if (metaInfo.protocol in emblems) {
                 // remmina emblems are fixed size of 22 pixels
                 let size = 22;
-                let name = emblems[metaInfo.protocol];
-                if (!theme.has_icon(name)) {
-                    // try with org.remmina.Remmina prefix as more recent
-                    // releases have changed to use this full prefix
-                    name = name.replace('remmina', 'org.remmina.Remmina');
-                    if (!theme.has_icon(name)) {
+                let names = emblems[metaInfo.protocol];
+                let name = null;
+                let found = false;
+                for (let n = 0; !found && n < names.length; n++) {
+                    name = names[n];
+                    found = theme.has_icon(name);
+                    if (!found) {
                         // also try with -symbolic suffix
                         name = name + '-symbolic';
+                        found = theme.has_icon(name);
                     }
                 }
-                let emblem = new St.Icon({ gicon: new Gio.ThemedIcon({name: name}),
-                                           icon_size: size});
-                box.add_child(emblem);
+                if (found) {
+                    let emblem = new St.Icon({ gicon: new Gio.ThemedIcon({name: name}),
+                        icon_size: size });
+                    box.add_child(emblem);
+                } else {
+                    console.debug("Failed to find emblem icon for protocol: " + metaInfo.protocol);
+                }
+            } else {
+                console.debug("No emblem defined for protocol: " + metaInfo.protocol);
             }
             return box;
         };
@@ -217,7 +281,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
                              description: session.server,
                              name: name });
             } else {
-                log("failed to find session with id: " + id);
+                console.warn("failed to find session with id: " + id);
             }
         }
         return metas;
@@ -269,28 +333,40 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
 
 export default class RemminaSearchProviderExtension {
     enable () {
-        if (!provider) {
+        if (!remminaApp) {
+            // desktop id changed in recent releases and make sure to include
+            // snap/flatpak ids too
+            let ids = ["org.remmina.Remmina", "remmina_remmina", "remmina", "remmina-file"];
+            for (let i = 0; i < ids.length; i++) {
+                remminaApp = Shell.AppSystem.get_default().lookup_app(ids[i] + ".desktop");
+                if (remminaApp) {
+                    break;
+                }
+            }
+            if (!remminaApp) {
+                console.warn("Failed to find remmina application");
+                let installed = Shell.AppSystem.get_default().get_installed();
+                installed.forEach((app) => {
+                    // log all installed apps for debugging in case one of them is a new variant of remmina
+                    console.debug("Installed app: " + app.get_id());
+                });
+            }
+        }
+        // only create the provider if remmina app is found otherwise we can't
+        // show icons or launch remmina so there is no point
+        if (!provider && remminaApp) {
             provider = new RemminaSearchProvider();
             Main.overview.searchController.addProvider(provider);
-        }
-        if (!remminaApp) {
-            // desktop id changed in recent releases
-            let ids = ["org.remmina.Remmina", "remmina", "remmina-file"];
-            for (let i = 0; !remminaApp && i < ids.length; i++)
-            {
-                remminaApp = Shell.AppSystem.get_default().lookup_app(ids[i] + ".desktop");
-            }
-            if (!remminaApp)
-            {
-                log("Failed to find remmina application");
-            }
         }
     }
 
     disable() {
         if (provider) {
             Main.overview.searchController.removeProvider(provider);
-            provider._remminaMonitor.cancel();
+            for (let i = 0; i < provider._remminaMonitors.length; i++) {
+                provider._remminaMonitors[i].cancel();
+                provider._remminaMonitors[i] = null;
+            }
             provider = null;
         }
         if (remminaApp) {
