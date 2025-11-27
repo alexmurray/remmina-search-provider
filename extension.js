@@ -46,12 +46,16 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
         // ie. ~/snap/remmina/current/.config/remmina/remmina.pref or flatpak -
         // ~/.var/app/org.remmina.Remmina/config/remmina/remmina.pref - from
         // each of these files parse it as a gkeyfile and get the
-        // remmina_pref.datadir_path value from each
-        let dirs = [GLib.build_filenamev([GLib.get_home_dir(), '.config', 'remmina']),
-                    GLib.build_filenamev([GLib.get_home_dir(), 'snap', 'remmina', 'current', '.config', 'remmina']),
-                    GLib.build_filenamev([GLib.get_home_dir(), '.var', 'app', 'org.remmina.Remmina', 'config', 'remmina'])];
+        // remmina_pref.datadir_path value from each - however if the value is
+        // not set then we need to try and use the same default that remmina
+        // itself uses
+        let dirs = new Map([
+            [GLib.build_filenamev([GLib.get_home_dir(), '.config', 'remmina']), GLib.build_filenamev([GLib.get_home_dir(), '.local', 'share', 'remmina'])],
+            [GLib.build_filenamev([GLib.get_home_dir(), 'snap', 'remmina', 'current', '.config', 'remmina']),  GLib.build_filenamev([GLib.get_home_dir(), 'snap', 'remmina', 'current', '.local', 'share', 'remmina'])],
+            [GLib.build_filenamev([GLib.get_home_dir(), '.var', 'app', 'org.remmina.Remmina', 'config', 'remmina'] ),  GLib.build_filenamev([GLib.get_home_dir(), '.var', 'app', 'org.remmina.Remmina', 'data', 'remmina'])]
+        ]);
         let paths = [];
-        dirs.map((dir_path) => {
+        dirs.forEach((default_datadir, dir_path, _) => {
             let pref_file_path = GLib.build_filenamev([dir_path, 'remmina.pref']);
             let pref_file = Gio.file_new_for_path(pref_file_path);
             if (pref_file.query_exists(null)) {
@@ -60,10 +64,14 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
                     keyfile.load_from_file(pref_file_path, 0);
                     if (keyfile.has_group('remmina_pref')) {
                         let data_dir = keyfile.get_string('remmina_pref', 'datadir_path');
-                        if (data_dir && data_dir != "" &&
-                            paths.indexOf(data_dir) < 0) {
-                                paths.push(data_dir);
-                            }
+                        // if data_dir is empty then default to data/remmina in the
+                        if (!data_dir || data_dir == "") {
+                            console.debug("remmina pref datadir_path empty - using default: " + default_datadir);
+                            data_dir = default_datadir;
+                        }
+                        if (paths.indexOf(data_dir) < 0) {
+                            paths.push(data_dir);
+                        }
                     } else {
                         console.warn("remmina_pref group not found in remmina pref file: " + pref_file_path);
                     }
