@@ -109,6 +109,12 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
     constructor(name) {
         this.id = 'remmina';
 
+        this.theme = new St.IconTheme();
+        // add snap icon search path
+        let snapIconPath = GLib.build_filenamev(['/snap', 'remmina', 'current', 'usr', 'share', 'icons']);
+        if (GLib.file_test(snapIconPath, GLib.FileTest.IS_DIR)) {
+            this.theme.append_search_path(snapIconPath);
+        }
         this._sessions = [];
         this._remminaMonitors = [];
 
@@ -197,34 +203,9 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
 
     createResultObject(metaInfo, terms) {
         metaInfo.createIcon = (size) => {
-            let theme = new St.IconTheme();
-            // add snap icon search path
-            let snapIconPath = GLib.build_filenamev(['/snap', 'remmina', 'current', 'usr', 'share', 'icons']);
-            if (GLib.file_test(snapIconPath, GLib.FileTest.IS_DIR)) {
-                theme.append_search_path(snapIconPath);
-            }
             let box = new St.BoxLayout();
             let icon = null;
-
-            if (remminaApp) {
-                icon = remminaApp.create_icon_texture(size);
-            }
-
-            if (!icon || !icon.gicon) {
-                // try the app icon
-                let gicon = null;
-                id = remminaApp.get_id();
-                if (theme.has_icon(id)) {
-                    gicon = new Gio.ThemedIcon({name: id});
-                }
-                if (!gicon)
-                    // this should not happen in general so log if it does
-                    console.debug("Failed to find icon for remmina");
-                // handle display scaling
-                let scale_factor = St.ThemeContext.get_for_stage(global.stage).scale_factor;
-                icon = new St.Icon({ gicon: gicon,
-                                     icon_size: size / scale_factor });
-            }
+            icon = remminaApp.create_icon_texture(size);
             box.add_child(icon);
             if (metaInfo.protocol in emblems) {
                 // remmina emblems are fixed size of 22 pixels
@@ -234,11 +215,11 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
                 let found = false;
                 for (let n = 0; !found && n < names.length; n++) {
                     name = names[n];
-                    found = theme.has_icon(name);
+                    found = this.theme.has_icon(name);
                     if (!found) {
                         // also try with -symbolic suffix
                         name = name + '-symbolic';
-                        found = theme.has_icon(name);
+                        found = this.theme.has_icon(name);
                     }
                 }
                 if (found) {
