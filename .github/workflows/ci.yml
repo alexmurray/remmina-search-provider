@@ -1,0 +1,21 @@
+name: CI
+
+on: pull_request
+
+jobs:
+  lint-gnome:
+    name: shexli (GNOME static analysis)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install shexli
+      - name: Run shexli
+        run: |
+          set -o pipefail
+          make
+          archive="$(find . -maxdepth 1 -type f -name '*.zip' | head -n 1)"
+          test -n "$archive"
+          shexli "$archive"
