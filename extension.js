@@ -73,7 +73,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
                             paths.push(data_dir);
                         }
                     } else {
-                        console.warn("remmina_pref group not found in remmina pref file: " + pref_file_path);
+                        throw new Error("remmina_pref group not found in remmina pref file: " + pref_file_path);
                     }
                     keyfile = null;
                 } catch (e) {
