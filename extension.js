@@ -73,7 +73,7 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
                             paths.push(data_dir);
                         }
                     } else {
-                        console.warn("remmina_pref group not found in remmina pref file: " + pref_file_path);
+                        throw new Error("remmina_pref group not found in remmina pref file: " + pref_file_path);
                     }
                     keyfile = null;
                 } catch (e) {
@@ -89,11 +89,11 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
     _monitorRemminaDir(path) {
         let dir = Gio.file_new_for_path(path);
         let monitor = dir.monitor_directory(Gio.FileMonitorFlags.NONE, null);
-        monitor.connect('changed', (monitor, file, other_file, type) => {
+        let id = monitor.connect('changed', (monitor, file, other_file, type) => {
             this._onMonitorChanged(monitor, file, other_file, type);
         });
         /* save a reference so we can cancel it on disable */
-        this._remminaMonitors.push(monitor);
+        this._remminaMonitors.set(id, monitor);
 
         this._listDirAsync(dir, (files) => {
             files.map((f) => {
@@ -116,12 +116,25 @@ var RemminaSearchProvider = class RemminaSearchProvider_SearchProvider {
             this.theme.append_search_path(snapIconPath);
         }
         this._sessions = [];
-        this._remminaMonitors = [];
+        // map of signal id to monitor so we can disconnect on disable
+        this._remminaMonitors = new Map();
 
         let paths = this._getDataDirPaths();
         for (let i = 0; i < paths.length; i++) {
             this._monitorRemminaDir(paths[i]);
         }
+    }
+
+    destroy() {
+        this.theme = null;
+        this._sessions = [];
+        for (let id of this._remminaMonitors.keys()) {
+            let monitor = this._remminaMonitors.get(id);
+            monitor.disconnect(id);
+            monitor.cancel();
+            this._remminaMonitors.set(id, null);
+        }
+        this._remminaMonitors = new Map();
     }
 
     _onMonitorChanged(monitor, file, other_file, type) {
@@ -352,10 +365,7 @@ export default class RemminaSearchProviderExtension {
     disable() {
         if (provider) {
             Main.overview.searchController.removeProvider(provider);
-            for (let i = 0; i < provider._remminaMonitors.length; i++) {
-                provider._remminaMonitors[i].cancel();
-                provider._remminaMonitors[i] = null;
-            }
+            provider.destroy();
             provider = null;
         }
         if (remminaApp) {
